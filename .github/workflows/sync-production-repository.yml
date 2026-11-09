@@ -1,0 +1,39 @@
+name: Sync production repository
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-production-repository
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Push main to destination repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Push source main to destination main
+        env:
+          DEST_REPO_TOKEN: ${{ secrets.DEST_REPO_TOKEN }}
+        run: |
+          if [ -z "$DEST_REPO_TOKEN" ]; then
+            echo "::error::Repository secret DEST_REPO_TOKEN is not configured."
+            exit 1
+          fi
+
+          AUTH="$(printf 'x-access-token:%s' "$DEST_REPO_TOKEN" | base64 -w 0)"
+          git -c http.extraheader="AUTHORIZATION: basic $AUTH" \
+            push https://github.com/heda26ansari-bot/MafiaNew.git \
+            HEAD:refs/heads/main
